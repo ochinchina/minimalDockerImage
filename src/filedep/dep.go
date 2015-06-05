@@ -1,6 +1,7 @@
 package filedep
 
 import (
+	"errors"
 	"os/exec"
 	"os"
 	"path/filepath"
@@ -27,7 +28,9 @@ func FindDirectDepend( app string ) []string {
 		} else if len( fields ) == 4 {
 			dep = fields[2]
 		}
-		deps = append( deps, dep )
+		if dep != "" {
+			deps = append( deps, dep )
+		}
 
 		for _, link := range FindLink( dep ) {
 			deps = append( deps, link )
@@ -77,7 +80,7 @@ func isUnderDir( path string, dir string ) bool {
 
 	if len( p1 ) >= len( p2 ) {
 		for index, name := range p2 {
-			if name != p2[index] {
+			if name != p1[index] {
 				return false
 			}
 		}
@@ -175,9 +178,11 @@ func FindDirectLink( lib string )( string, error ) {
 				a = append( a, fields[ n - 1 ]  )
 				return strings.Join( a, "/" ), nil
 			} 
+		} else {
+			return fields[ n - 1], nil
 		}
 	} 
-	return fields[ n - 1], nil
+	return "", errors.New( "no link found" )
 
 }
 
@@ -187,8 +192,11 @@ func FindLink( lib string )[]string {
 	links := make( []string, 0 )
 
 	for {
-		link, _ := FindDirectLink( cur )
+		link, err := FindDirectLink( cur )
 
+		if err != nil {
+			break	
+		}
 		if link != cur {
 			links = append( links, link )
 			cur = link
