@@ -121,6 +121,10 @@ func FindDepend( apps *[]string ) []string {
 	for _, app := range *apps {
 		unProcessDeps = append( unProcessDeps, app )
 		depsMap[ app ] = 1
+
+		for _, link := range FindLink( app ) {
+			depsMap[ link ] = 1
+		}
 	}
 
 	for {
