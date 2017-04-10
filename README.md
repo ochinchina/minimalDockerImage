@@ -11,7 +11,7 @@ path to the tool. This tool will package the application and all its dependency 
 a tarball or make a docker image directly if you have installed your docker in your running
 environment.
 
-##compile the tool
+## compile the tool
 
 ```shell
 $ git clone https://github.com/ochinchina/minimalDockerImage.git
@@ -20,9 +20,9 @@ $ export GOPATH=`pwd`
 $ go install mdi
 $ export PATH=$GOPATH/bin:$PATH
 ```
-##run the tool to make package for you
+## run the tool to make package for you
 
-###make a tarball file
+### make a tarball file
 
 Create a tarball to include /usr/bin/ls, /usr/bin/pwd file and their dependencies, execute following command:
 
@@ -53,7 +53,7 @@ $ mdi -i /usr/bin -o test.tar create_tar
 
 if some .so files or executable binary files under /usr/bin depend on .so files in other directory, the output test.tar file will contains them also.
 
-###make docker image
+### make docker image
 
 If docker is started in the host running mdi tool, you can make a docker image directly, the optional flag "-i" and "-f" is same as the create_tar command.
 
@@ -63,7 +63,7 @@ For example, if you want to make a docker image named "haproxy" to include the /
 $ mdi -i /usr/bin/haproxy -o haproxy create_image
 ```
 
-###print all the files
+### print all the files
 
 If you just want to see what files will be contained in the docker image, you can run the tool like:
 
