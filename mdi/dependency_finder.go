@@ -7,17 +7,36 @@ import (
 	"strings"
 )
 
+type DependencyList struct {
+	deps map[string]bool
+}
+
+func NewDependencyList() *DependencyList {
+	return &DependencyList{deps: make(map[string]bool)}
+}
+
+func (dl DependencyList) Append(dep string) {
+	dl.deps[dep] = true
+}
+
+func (dl DependencyList) ForEach(depProcCallback func(dep string)) {
+	for k := range dl.deps {
+		depProcCallback(k)
+	}
+}
+
 type DependencyFinder struct {
 	config     *ImageConfig
-	result     []string
+	result     *DependencyList
 	linkFinder LinkFinder
 }
 
 func NewDependencyFinder(config *ImageConfig) *DependencyFinder {
-	return &DependencyFinder{config: config, result: make([]string, 0)}
+	return &DependencyFinder{config: config,
+		result: NewDependencyList()}
 }
 
-func (df *DependencyFinder) FindDependencies() []string {
+func (df *DependencyFinder) FindDependencies() *DependencyList {
 	files := df.config.getAllIncludes()
 	for len(files) > 0 {
 		file := files[0]
@@ -34,7 +53,7 @@ func (df *DependencyFinder) FindDependencies() []string {
 
 		//find all the dependencies
 		if IsExecutable(file) {
-			df.result = append(df.result, file)
+			df.result.Append(file)
 			df.findDependencies(file, func(depLib string) {
 				files = append(files, depLib)
 			})
@@ -43,7 +62,7 @@ func (df *DependencyFinder) FindDependencies() []string {
 				files = append(files, f)
 			})
 		} else if df.config.inInclude(file) {
-			df.result = append(df.result, file)
+			df.result.Append(file)
 		}
 	}
 
