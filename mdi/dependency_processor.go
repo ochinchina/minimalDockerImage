@@ -67,7 +67,7 @@ func (ddp *DependencyDockerImageMakeProcessor) ProcessDependencies(deps *Depende
 
 	defer os.Remove(tarFileName)
 
-	return exec.Command("docker", "import", tarFileName).Run()
+	return exec.Command("docker", "import", tarFileName, ddp.imageName ).Run()
 }
 
 type DependencyPrintProcessor struct {

@@ -61,7 +61,7 @@ func (df *DependencyFinder) FindDependencies() *DependencyList {
 			df.listFiles(file, func(f string) {
 				files = append(files, f)
 			})
-		} else if df.config.inInclude(file) {
+		} else {
 			df.result.Append(file)
 		}
 	}
@@ -76,23 +76,21 @@ func (df *DependencyFinder) findDependencies(app string, depCallback func(depLib
 	}
 
 	lines := strings.Split(string(r), "\n")
-	linkFinder := LinkFinder{}
 
 	for _, line := range lines {
 		fields := strings.Fields(line)
 		dep := ""
-		if len(fields) == 2 {
-			if fields[1][0] == '(' {
-				dep = fields[0]
-			}
-		} else if len(fields) == 4 {
-			dep = fields[2]
-		}
+        switch len(fields) {
+        case 2:
+            if fields[1][0] == '(' {
+                dep = fields[0]
+            }
+        case 4:
+            dep = fields[2]
+        }
 		if dep != "" {
 			depCallback(dep)
 		}
-
-		linkFinder.FindLink(dep, depCallback)
 	}
 }
 func (finder *DependencyFinder) listFiles(dir string, fileFoundCallback func(file string)) {
