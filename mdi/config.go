@@ -1,10 +1,12 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -14,30 +16,33 @@ type ImageConfig struct {
 	excludes []string
 }
 
-func NewImageConfig(configFile string) (*ImageConfig, error) {
-	config := &ImageConfig{includes: make([]string, 0), excludes: make([]string, 0)}
+func NewImageConfigWithFile(configFile string) (*ImageConfig, error) {
 	f, err := os.Open(configFile)
 	if err != nil {
-		return config, err
+		return nil, err
 	}
 
-	r := bufio.NewReader(f)
-	for {
-		//read a line
-		line, err := r.ReadString('\n')
-		if err != nil {
-			break
-		}
-		line = strings.TrimSpace(line)
-		//ignore the empty and comments line
-		if len(line) <= 0 || line[0] == '#' {
-			continue
-		}
+	return NewImageConfig(f)
+}
 
-		if line[0] == '-' {
-			config.excludes = append(config.excludes, line[1:])
-		} else {
-			config.includes = append(config.includes, line)
+func NewImageConfig(reader io.Reader) (*ImageConfig, error) {
+	config := &ImageConfig{includes: make([]string, 0), excludes: make([]string, 0)}
+
+	//read whole content
+	b, err := ioutil.ReadAll(reader)
+	if err != nil {
+		return nil, err
+	}
+
+	//process line by line
+	for _, line := range strings.Split(string(b), "\n") {
+		line = strings.TrimSpace(line)
+		if len(line) > 0 && line[0] != '#' {
+			if line[0] == '-' {
+				config.excludes = append(config.excludes, line[1:])
+			} else {
+				config.includes = append(config.includes, line)
+			}
 		}
 	}
 	return config, nil
@@ -55,6 +60,10 @@ func (ic *ImageConfig) isWildcastFile(filename string) bool {
 func (ic *ImageConfig) getAllIncludes() []string {
 	result := make([]string, 0)
 	for _, file := range ic.includes {
+		file, err := filepath.Abs(file)
+		if err != nil {
+			continue
+		}
 		if ic.isWildcastFile(file) {
 			result = append(result, path.Dir(file))
 		} else {
@@ -83,10 +92,7 @@ func (ic *ImageConfig) inFileList(filename string, files []string) bool {
 			return true
 		}
 		if IsDir(file) {
-			pos := strings.Index(filename, file)
-			if pos != -1 && file[pos+1] == os.PathSeparator {
-				return true
-			}
+			return IsParentDir(file, filename)
 		} else if ic.isWildcastFile(file) && ic.matchPattern(filename, file) {
 			return true
 		}
@@ -94,11 +100,20 @@ func (ic *ImageConfig) inFileList(filename string, files []string) bool {
 	return false
 }
 
+// check if the file matches the file_pattern or not
+// Returns:
+//  true if the file matches the file_pattern
 func (ic *ImageConfig) matchPattern(file string, file_pattern string) bool {
 	regEx := ic.toRegEx(file_pattern)
 	matched, err := regexp.MatchString(regEx, file)
 	return matched && err == nil
 }
+
+// convert the supported '*' and '?' to golang regex
+// Arguments:
+//	s the string maybe include '*' or '?'
+// Returns:
+// the converted golang regex
 func (imageConfig *ImageConfig) toRegEx(s string) string {
 	result := ""
 	for _, ch := range s {

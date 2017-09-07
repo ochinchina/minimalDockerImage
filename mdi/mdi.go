@@ -7,7 +7,7 @@ import (
 )
 
 func LoadConfig(infiles string, fileName string) *ImageConfig {
-	config, err := NewImageConfig(fileName)
+	config, err := NewImageConfigWithFile(fileName)
 	if err != nil {
 		config.includes = strings.Split(infiles, ",")
 	}
@@ -20,9 +20,11 @@ func printUsage() {
 	fmt.Printf("filename   the absolute file name which contains all files should be packed\n")
 	fmt.Printf("outputname the output tar file name or docker image name\n")
 	fmt.Printf("command:\n")
-	fmt.Printf("    create_tar    create a tar file\n")
-	fmt.Printf("    create_image  create docker image\n")
-	fmt.Printf("    list_files    list all the files will ba packed\n")
+	fmt.Printf("    create_tar    create a tar file, the option -o must be present\n")
+	fmt.Printf("    create_image  create docker image, the option -o will be ignored if present\n")
+	fmt.Printf("    list_files    list all the files will ba packed, the option -o will be ignored if present\n")
+	fmt.Printf("\n")
+	fmt.Printf("For the option -i and -f, you can only choose one, don't input both\n")
 }
 
 func main() {
