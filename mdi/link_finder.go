@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"log"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -10,50 +11,65 @@ import (
 type LinkFinder struct {
 }
 
-func (lf LinkFinder) FindLink(lib string, linkCallback func(link string)) {
-	cur := lib
-	for {
-		link, err := lf.findDirectLink(cur)
-
-		if err != nil {
-			break
-		}
-		if link != cur {
-			linkCallback(link)
-			cur = link
-		} else {
-			break
-		}
+func (lf LinkFinder) FindDirectLink(filename string) (string, error) {
+	abs_filename, err := filepath.Abs(filename)
+	if err != nil {
+		return "", err
 	}
-}
-
-func (lf LinkFinder) findDirectLink(lib string) (string, error) {
-	r, err := exec.Command("ls", "-l", lib).Output()
+	r, err := exec.Command("ls", "-l", filepath.Dir(abs_filename)).Output()
 
 	if err != nil {
 		return "", err
 	}
 
-	line := string(r)
+	lib_base_name := filepath.Base(abs_filename)
 
-	fields := strings.Fields(line)
-	n := len(fields)
+	for _, line := range strings.Split(string(r), "\n") {
+		fields := strings.Fields(line)
+		n := len(fields)
 
-	if n > 3 && fields[n-2] == "->" {
-
-		if !filepath.IsAbs(fields[n-1]) {
-
-			i := strings.LastIndex(lib, "/")
-
-			if i > 0 {
-				a := make([]string, 0)
-				a = append(a, lib[0:i])
-				a = append(a, fields[n-1])
-				return strings.Join(a, "/"), nil
+		if n > 3 && fields[0][0] == 'l' && fields[n-2] == "->" && fields[n-3] == lib_base_name {
+			linkedFile := fields[n-1]
+			if !filepath.IsAbs(linkedFile) {
+				linkedFile = filepath.Join(filepath.Dir(abs_filename), linkedFile)
 			}
-		} else {
-			return fields[n-1], nil
+
+			log.Printf("%s is symbol link of %s\n", filename, linkedFile)
+			return linkedFile, nil
 		}
 	}
 	return "", errors.New("no link found")
+}
+
+func (lf LinkFinder) IsSymbolLink(filename string) bool {
+	_, err := lf.FindDirectLink(filename)
+	return err == nil
+}
+
+//
+// return a tuple (symbol link, linked file, full name, error )
+//
+func (lf LinkFinder) FindRealName(filename string) (string, string, string, error) {
+
+	abs_filename, err := filepath.Abs(filename)
+
+	if err != nil {
+		return "", "", "", err
+	}
+
+	cur_filename := abs_filename
+	for {
+		dir := filepath.Dir(cur_filename)
+		if dir == cur_filename {
+			break
+		}
+
+		link, err := lf.FindDirectLink(dir)
+		if err == nil && link != dir {
+			return dir, link, strings.Replace(abs_filename, dir, link, 1), nil
+		}
+		cur_filename = dir
+	}
+
+	return "", "", "", errors.New("not a link")
 }

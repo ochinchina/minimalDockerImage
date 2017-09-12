@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -23,9 +24,10 @@ func NewDependencyTarballProcessor(outputFile string) *DependencyTarballProcesso
 }
 
 func (dtp *DependencyTarballProcessor) ProcessDependencies(deps *DependencyList) error {
-
+	log.Printf("start to create tarball %s with files", dtp.outputFile)
 	index := -1
 	deps.ForEach(func(file string) {
+		log.Printf("add file %s to tarball", file)
 		index++
 		if index == 0 {
 			exec.Command("tar", "-cf", dtp.outputFile, file).Run()
@@ -33,6 +35,8 @@ func (dtp *DependencyTarballProcessor) ProcessDependencies(deps *DependencyList)
 			exec.Command("tar", "-uf", dtp.outputFile, file).Run()
 		}
 	})
+
+	log.Printf("Make tarball is finished")
 
 	return nil
 }
@@ -76,7 +80,15 @@ func (ddp *DependencyDockerImageMakeProcessor) ProcessDependencies(deps *Depende
 
 	defer os.Remove(tarFileName)
 
-	return exec.Command("docker", "import", tarFileName, ddp.imageName).Run()
+	log.Printf("try to load the tarball as docker image: %s", ddp.imageName)
+	b, err := exec.Command("docker", "import", tarFileName, ddp.imageName).Output()
+	if b != nil && len(b) > 0 {
+		log.Printf("docker returns:\n%s\n", string(b))
+	}
+	if err != nil {
+		log.Fatalf("Fail to load the tarball to docker:%v", err)
+	}
+	return err
 }
 
 type DependencyPrintProcessor struct {
@@ -113,7 +125,6 @@ func (dhp DependencyHttpOutProcessor) ProcessDependencies(deps *DependencyList) 
 		return err
 	}
 
-	fmt.Println("Status:%s", resp.Status)
 	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return err
