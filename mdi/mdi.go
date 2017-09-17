@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 )
@@ -39,6 +38,8 @@ func (nw NullWriter) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
+var log *Logger = NewLogger(os.Stdout)
+
 func setLogFile(log_file string) {
 	if len(log_file) <= 0 {
 		log_file = "/dev/stdout"
@@ -59,6 +60,7 @@ func setLogFile(log_file string) {
 		}
 	}
 }
+
 func main() {
 
 	var fileName = flag.String("f", "", "file name")

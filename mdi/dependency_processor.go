@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -24,10 +23,10 @@ func NewDependencyTarballProcessor(outputFile string) *DependencyTarballProcesso
 }
 
 func (dtp *DependencyTarballProcessor) ProcessDependencies(deps *DependencyList) error {
-	log.Printf("start to create tarball %s with files", dtp.outputFile)
+	log.Debugf("start to create tarball %s with files", dtp.outputFile)
 	index := -1
 	deps.ForEach(func(file string) {
-		log.Printf("add file %s to tarball", file)
+		log.Debugf("add file %s to tarball", file)
 		index++
 		if index == 0 {
 			exec.Command("tar", "-cf", dtp.outputFile, file).Run()
@@ -36,7 +35,7 @@ func (dtp *DependencyTarballProcessor) ProcessDependencies(deps *DependencyList)
 		}
 	})
 
-	log.Printf("Make tarball is finished")
+	log.Debugf("Make tarball is finished")
 
 	return nil
 }
@@ -80,13 +79,13 @@ func (ddp *DependencyDockerImageMakeProcessor) ProcessDependencies(deps *Depende
 
 	defer os.Remove(tarFileName)
 
-	log.Printf("try to load the tarball as docker image: %s", ddp.imageName)
+	log.Debugf("try to load the tarball as docker image: %s", ddp.imageName)
 	b, err := exec.Command("docker", "import", tarFileName, ddp.imageName).Output()
 	if b != nil && len(b) > 0 {
-		log.Printf("docker returns:\n%s\n", string(b))
+		log.Debugf("docker returns:\n%s", string(b))
 	}
 	if err != nil {
-		log.Fatalf("Fail to load the tarball to docker:%v", err)
+		log.Errorf("Fail to load the tarball to docker:%v", err)
 	}
 	return err
 }

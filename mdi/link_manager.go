@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"path/filepath"
 	"strings"
 )
@@ -25,12 +26,12 @@ func (lm *LinkManager) FindRealName(filename string) (symbolLink string, realNam
 	if err != nil {
 		return
 	}
-	for symbol, f := range lm.links {
-		if strings.HasPrefix(abs_filename, symbol) && abs_filename[len(symbol)] == filepath.Separator {
-			symbolLink = symbol
-			realName = strings.Replace(abs_filename, symbolLink, f, 1)
-			return
-		}
+	if lm.notSymbolLink(abs_filename) {
+		return "", "", errors.New("Not a symbol")
+	}
+	symbolLink, realName, err = lm.findRealNameFromCache(abs_filename)
+	if err != nil {
+		return
 	}
 
 	linkedName := ""
@@ -38,31 +39,36 @@ func (lm *LinkManager) FindRealName(filename string) (symbolLink string, realNam
 	if err == nil {
 		lm.links[symbolLink] = linkedName
 	} else {
-		cur_file := abs_filename
-		for {
-			dir := filepath.Dir(cur_file)
-			if dir == cur_file {
-				break
-			}
-
-			lm.notLinks[dir] = dir
-			cur_file = dir
-		}
+		lm.updateNotSymbol(abs_filename)
 	}
 	return
 }
 
-func (lm *LinkManager) mustNotSymbolLink(filename string) bool {
+func (lm *LinkManager) updateNotSymbol(filename string) {
 	cur_file := filename
 	for {
 		dir := filepath.Dir(cur_file)
-		if _, ok := lm.notLinks[dir]; ok {
-			return true
-		}
 		if dir == cur_file {
 			break
 		}
+
+		lm.notLinks[dir] = dir
 		cur_file = dir
+	}
+}
+func (lm *LinkManager) findRealNameFromCache(filename string) (string, string, error) {
+	for symbol, f := range lm.links {
+		if strings.HasPrefix(filename, symbol) && filename[len(symbol)] == filepath.Separator {
+			return symbol, strings.Replace(filename, symbol, f, 1), nil
+		}
+	}
+	return "", "", errors.New("not a symbol")
+}
+
+func (lm *LinkManager) notSymbolLink(filename string) bool {
+	dir := filepath.Dir(filename)
+	if _, ok := lm.notLinks[dir]; ok {
+		return true
 	}
 	return false
 }

@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"log"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -34,7 +33,7 @@ func (lf LinkFinder) FindDirectLink(filename string) (string, error) {
 				linkedFile = filepath.Join(filepath.Dir(abs_filename), linkedFile)
 			}
 
-			log.Printf("%s is symbol link of %s\n", filename, linkedFile)
+			log.Infof("%s is symbol link of %s", filename, linkedFile)
 			return linkedFile, nil
 		}
 	}

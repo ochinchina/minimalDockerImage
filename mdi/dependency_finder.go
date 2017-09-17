@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -84,22 +83,16 @@ func NewDependencyFinder(config *ImageConfig) *DependencyFinder {
 }
 
 func (df *DependencyFinder) FindDependencies() *DependencyList {
-	files := df.config.getAllIncludes()
-	already_processed_files := make(map[string]string)
-	for len(files) > 0 {
-		file := files[0]
-		files = files[1:]
-		if _, ok := already_processed_files[file]; ok {
-			log.Printf("The dependency of file %s is already processed", file)
-			continue
-		}
-		already_processed_files[file] = file
-		log.Printf("Find dependency of %s\n", file)
+	pendingFiles := NewDependencyPendingFiles(df.config.getAllIncludes())
+
+	for !pendingFiles.IsEmpty() {
+		file, _ := pendingFiles.Take()
+		log.Infof("Find dependency of %s", file)
 
 		//if it contains symbol link
 		symbolLink, realName, err := df.lm.FindRealName(file)
 		if err == nil {
-			files = append(files, realName)
+			pendingFiles.Add(realName)
 			df.result.Append(symbolLink)
 			continue
 		}
@@ -114,7 +107,7 @@ func (df *DependencyFinder) FindDependencies() *DependencyList {
 
 		if err == nil {
 			if !df.result.isLinkRetrieved(link) {
-				files = append(files, link)
+				pendingFiles.Add(link)
 			}
 			continue
 		}
@@ -122,11 +115,11 @@ func (df *DependencyFinder) FindDependencies() *DependencyList {
 		//find all the dependencies
 		if IsDir(file) {
 			df.findDirDependencies(file, func(depLib string) {
-				files = append(files, depLib)
+				pendingFiles.Add(depLib)
 			})
 		} else if IsExecutable(file) {
 			df.findDirectDependLibs(file, func(depLib string) {
-				files = append(files, depLib)
+				pendingFiles.Add(depLib)
 			})
 		}
 	}

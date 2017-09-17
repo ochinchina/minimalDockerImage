@@ -8,6 +8,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -83,15 +84,24 @@ func (ic *ImageConfig) getAllIncludes() []string {
 		if ic.isWildcastFile(file) {
 			file = path.Dir(file)
 		}
-		if lf.IsSymbolLink(file) {
-			links = append(links, file)
+		abs_file, err := filepath.Abs(file)
+		if err != nil || !Exist(abs_file) {
+			continue
+		}
+
+		if lf.IsSymbolLink(abs_file) {
+			links = append(links, abs_file)
 		} else {
-			result = append(result, file)
+			result = append(result, abs_file)
 		}
 	}
+
+	sort.Sort(sort.StringSlice(result))
+
 	for _, link := range links {
 		result = append(result, link)
 	}
+
 	return result
 }
 
